@@ -716,6 +716,14 @@ func capabilityRows() []Capability {
 		},
 		{
 			Area:       "access",
+			Capability: "App Store Connect providers",
+			Status:     statusWebSession,
+			Commands:   []string{"asc web providers list"},
+			Notes:      []string{"Lists every App Store Connect provider (team) of the web session's Apple Account and marks the current one. --provider-name, --public-provider-id or --provider-id switches the cached session first."},
+			NextAction: "Use asc web providers list to find a --provider-name or --public-provider-id value for asc web apps create and other asc web commands.",
+		},
+		{
+			Area:       "access",
 			Capability: "App Store Connect Business agreements",
 			Status:     statusWebSession,
 			Commands:   []string{"asc web business agreements"},
