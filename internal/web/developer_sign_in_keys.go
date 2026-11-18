@@ -167,6 +167,22 @@ func (c *Client) CreateDeveloperSignInKey(ctx context.Context, name, bundleID st
 }
 
 func (c *Client) DownloadDeveloperSignInKey(ctx context.Context, keyID string) ([]byte, error) {
+	return c.downloadDeveloperAuthKey(ctx, keyID, signInKeyService, "a Sign in with Apple")
+}
+
+// HasService reports whether the key carries the Developer Portal service.
+func (k *DeveloperSignInKey) HasService(service string) bool {
+	for _, configured := range k.Services {
+		if configured.ID == service {
+			return true
+		}
+	}
+	return false
+}
+
+// downloadDeveloperAuthKey consumes the one-time P8 download of a key that
+// carries service; label names the key kind in errors.
+func (c *Client) downloadDeveloperAuthKey(ctx context.Context, keyID, service, label string) ([]byte, error) {
 	if _, err := c.ListDeveloperSignInKeys(ctx); err != nil {
 		return nil, err
 	}
@@ -174,14 +190,8 @@ func (c *Client) DownloadDeveloperSignInKey(ctx context.Context, keyID string) (
 	if err != nil {
 		return nil, err
 	}
-	supported := false
-	for _, service := range key.Services {
-		if service.ID == signInKeyService {
-			supported = true
-		}
-	}
-	if !supported {
-		return nil, fmt.Errorf("key %s is not a Sign in with Apple key", keyID)
+	if !key.HasService(service) {
+		return nil, fmt.Errorf("key %s is not %s key", keyID, label)
 	}
 	if !key.CanDownload {
 		return nil, fmt.Errorf("key %s is no longer downloadable", keyID)

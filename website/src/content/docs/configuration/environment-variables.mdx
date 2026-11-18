@@ -185,6 +185,20 @@ They do not replace `ASC_KEY_ID`, `ASC_ISSUER_ID`, or the other API credentials.
   the optional native build, a connected key, and physical touch.
 </ParamField>
 
+<ParamField path="ASC_WEB_PROMPT_TERMINAL" type="string">
+  Where `asc web` asks for the Apple Account password or a two-factor code when
+  it runs without a terminal: `auto`, `herdr`, `tmux`, or `off`
+
+  `auto` (the default) opens the prompt in a new window of the tmux session asc
+  runs in, else in a new tab of a running Herdr server, else in a detached tmux
+  session and prints how to attach. asc prints the pane id, so a person or an
+  agent can type the answer there (`herdr pane send-text`, `tmux send-keys`).
+  Input is not echoed; the answer comes back through a private temporary file
+  that is removed at once, and the pane closes. The prompt waits up to 10
+  minutes. `herdr` or `tmux` always uses that terminal and fails when it is not
+  installed; `off` never opens one. A terminal of asc's own always wins.
+</ParamField>
+
 <ParamField path="ASC_WEB_2FA_METHOD" type="string">
   Two-factor method for a fresh `asc web` login: `auto`, `sms`, or `security-key`
 

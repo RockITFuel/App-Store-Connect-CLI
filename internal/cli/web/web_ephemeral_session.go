@@ -18,7 +18,7 @@ func validateSessionFromEnvFlags(d *shared.Deps, flags webSessionFlags) error {
 	var unsupported string
 	flags.flagSet.Visit(func(f *flag.Flag) {
 		switch f.Name {
-		case "provider-id", "public-provider-id", "two-factor-code-command", "two-factor-method", "two-factor-phone-id":
+		case "provider-id", "public-provider-id", "provider-name", "two-factor-code-command", "two-factor-method", "two-factor-phone-id":
 			if unsupported == "" {
 				unsupported = f.Name
 			}

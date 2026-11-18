@@ -205,7 +205,9 @@ it asks for `--apple-id`; without a password source it asks for a terminal or
 `ASC_WEB_PASSWORD`. To check for a session without failing, run
 `asc web auth status`; it prints `"authenticated":false` and exits `0`.
 
-Without an interactive terminal, signing in also needs a two-factor code
+Without an interactive terminal, asc opens the password and two-factor prompts
+in a Herdr tab or a tmux window when one is available (`ASC_WEB_PROMPT_TERMINAL`).
+Without either, signing in needs a two-factor code
 source: `--two-factor-code-command` or `ASC_WEB_2FA_CODE_COMMAND`. Explicit
 security-key sign-in on an opt-in build does not. A fresh sign-in that has
 neither exits with code `1` before sending the password to Apple, so no
@@ -214,7 +216,7 @@ cached session still tries it, and stops before requesting a code if Apple asks
 for one:
 
 ```text
-Error: 2fa required: run in a terminal for an interactive prompt, pass --two-factor-code-command, or set ASC_WEB_2FA_CODE_COMMAND
+Error: 2fa required: run in a terminal for an interactive prompt, install Herdr or tmux for a prompt terminal (ASC_WEB_PROMPT_TERMINAL), pass --two-factor-code-command, or set ASC_WEB_2FA_CODE_COMMAND
 ```
 
 A verification code Apple rejects exits with code `3`.
@@ -498,6 +500,24 @@ commands. The command only reads the list; it does not select a team.
 asc web teams list
 asc web teams list --output json
 ```
+
+### `asc web providers`
+
+App Store Connect web commands, such as `asc web apps create`, act for the
+session's current App Store Connect provider (team). `asc web providers list`
+lists every provider of the Apple Account and marks the current one. Every
+`asc web` command takes `--provider-name`, `--public-provider-id` or
+`--provider-id` to switch the cached session to a provider first.
+
+```bash
+asc web providers list
+asc web providers list --provider-name "Example Inc."
+asc web apps create --name "My App" --bundle-id com.example.app --sku MYAPP1 --provider-name "Example Inc."
+```
+
+When Apple answers `asc web apps create` with a 5xx, the error names the
+provider the session acted for: a bundle ID registered on another team
+produces this response.
 
 ### `asc web finance`
 
@@ -1392,6 +1412,23 @@ asc web sign-in-keys download --key-id KEY_ID --developer-team TEAM_ID --output-
 Private key creation and download require macOS or Linux with native atomic file publication. Unsupported platforms fail before contacting Apple. If the destination changes during a download, it is preserved and the private key is retained in a mode-0600 recovery file whose path appears in the error.
 
 Apple's private Developer Portal endpoints may change. An uncertain mutation or one-time download is not retried automatically. If creation fails after Apple created the key, inspect `list` and `view`, then use `download` on the existing key rather than creating another. Store the downloaded file securely; Apple may not allow a second download.
+
+## APNs push notification keys
+
+`asc web push-keys` manages the team's Apple Push Notification service keys.
+Keys are team scoped. `--environment` is `sandbox`, `production` or `both`
+(default).
+
+```bash
+asc web push-keys list --developer-team TEAM_ID --output json
+asc web push-keys create --name "My App push" --environment production --developer-team TEAM_ID --output-dir ./private-keys --confirm
+asc web push-keys download --key-id KEY_ID --developer-team TEAM_ID --output-dir ./private-keys --confirm
+asc web push-keys revoke --key-id KEY_ID --developer-team TEAM_ID --confirm
+```
+
+Creation and download share the Sign in with Apple key flow: `--confirm`, a
+non-secret receipt with the key ID, team ID and saved path, and a mode-0600 P8
+that is never overwritten. `revoke` refuses keys of other services.
 
 ## Session upkeep
 

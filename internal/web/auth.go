@@ -153,13 +153,15 @@ type AuthSession struct {
 // ProviderSelection identifies the App Store Connect provider/team a web
 // session should use. ProviderID is Apple's numeric provider id; PublicProviderID
 // is the public team/provider id users usually recognize.
+// ProviderName matches the provider's display name, case-insensitively.
 type ProviderSelection struct {
 	ProviderID       int64
 	PublicProviderID string
+	ProviderName     string
 }
 
 func (s ProviderSelection) empty() bool {
-	return s.ProviderID == 0 && strings.TrimSpace(s.PublicProviderID) == ""
+	return s.ProviderID == 0 && strings.TrimSpace(s.PublicProviderID) == "" && strings.TrimSpace(s.ProviderName) == ""
 }
 
 // LoginCredentials holds Apple ID credentials.
@@ -1408,6 +1410,9 @@ func providerSelectionDescription(selection ProviderSelection) string {
 	if publicID := strings.TrimSpace(selection.PublicProviderID); publicID != "" {
 		parts = append(parts, fmt.Sprintf("public-provider-id=%s", publicID))
 	}
+	if name := strings.TrimSpace(selection.ProviderName); name != "" {
+		parts = append(parts, fmt.Sprintf("provider-name=%q", name))
+	}
 	return strings.Join(parts, " ")
 }
 
@@ -1428,10 +1433,7 @@ func availableProviderSummaries(info *sessionInfo) string {
 	if info == nil {
 		return ""
 	}
-	providers := info.AvailableProviders
-	if len(providers) == 0 && info.Provider.ProviderID != 0 {
-		providers = []sessionProviderInfo{info.Provider}
-	}
+	providers := sessionProviders(info)
 	summaries := make([]string, 0, len(providers))
 	for _, provider := range providers {
 		summaries = append(summaries, providerSummary(provider))
@@ -1457,11 +1459,58 @@ func resolveProviderSelection(info *sessionInfo, selection ProviderSelection) (s
 	if info == nil {
 		return sessionProviderInfo{}, fmt.Errorf("session info is required")
 	}
-	publicID := strings.TrimSpace(selection.PublicProviderID)
-	providers := info.AvailableProviders
-	if len(providers) == 0 && info.Provider.ProviderID != 0 {
-		providers = []sessionProviderInfo{info.Provider}
+	name := strings.TrimSpace(selection.ProviderName)
+	if name == "" {
+		return resolveProviderSelectionByID(info, selection)
 	}
+	byName, err := resolveProviderByName(info, selection, name)
+	if err != nil {
+		return sessionProviderInfo{}, err
+	}
+	if selection.ProviderID == 0 && strings.TrimSpace(selection.PublicProviderID) == "" {
+		return byName, nil
+	}
+	byID, err := resolveProviderSelectionByID(info, selection)
+	if err != nil {
+		return sessionProviderInfo{}, err
+	}
+	if byID.ProviderID != byName.ProviderID {
+		return sessionProviderInfo{}, newInvalidProviderSelectionError("provider selection mismatch: provider-name %q is %s, not %s", name, providerSummary(byName), providerSummary(byID))
+	}
+	return byID, nil
+}
+
+func resolveProviderByName(info *sessionInfo, selection ProviderSelection, name string) (sessionProviderInfo, error) {
+	var matches []sessionProviderInfo
+	for _, provider := range sessionProviders(info) {
+		if strings.EqualFold(strings.TrimSpace(provider.Name), name) {
+			matches = append(matches, provider)
+		}
+	}
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		return sessionProviderInfo{}, newInvalidProviderSelectionError("provider selection %s did not match any available providers (available: %s)", providerSelectionDescription(selection), availableProviderSummaries(info))
+	default:
+		summaries := make([]string, 0, len(matches))
+		for _, provider := range matches {
+			summaries = append(summaries, providerSummary(provider))
+		}
+		return sessionProviderInfo{}, newInvalidProviderSelectionError("provider-name %q matches several providers (%s); pass --public-provider-id instead", name, strings.Join(summaries, ", "))
+	}
+}
+
+func sessionProviders(info *sessionInfo) []sessionProviderInfo {
+	if len(info.AvailableProviders) == 0 && info.Provider.ProviderID != 0 {
+		return []sessionProviderInfo{info.Provider}
+	}
+	return info.AvailableProviders
+}
+
+func resolveProviderSelectionByID(info *sessionInfo, selection ProviderSelection) (sessionProviderInfo, error) {
+	publicID := strings.TrimSpace(selection.PublicProviderID)
+	providers := sessionProviders(info)
 
 	var matched *sessionProviderInfo
 	for i := range providers {
@@ -1494,6 +1543,39 @@ func resolveProviderSelection(info *sessionInfo, selection ProviderSelection) (s
 		return sessionProviderInfo{}, newInvalidProviderSelectionError("provider selection %s did not match any available providers (available: %s)", providerSelectionDescription(selection), available)
 	}
 	return *matched, nil
+}
+
+// SessionProvider is one App Store Connect provider (team) the web session's
+// Apple Account can act for.
+type SessionProvider struct {
+	ProviderID       int64
+	PublicProviderID string
+	Name             string
+	Current          bool
+}
+
+// ListSessionProviders returns the providers of the session's Apple Account,
+// marking the one the session currently acts for.
+func ListSessionProviders(ctx context.Context, session *AuthSession) ([]SessionProvider, error) {
+	if session == nil || session.Client == nil {
+		return nil, fmt.Errorf("web session is required")
+	}
+	info, err := getSessionInfo(ctx, session.Client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get session info: %w", err)
+	}
+	applySessionInfo(session, info)
+	providers := sessionProviders(info)
+	result := make([]SessionProvider, 0, len(providers))
+	for _, provider := range providers {
+		result = append(result, SessionProvider{
+			ProviderID:       provider.ProviderID,
+			PublicProviderID: strings.TrimSpace(provider.PublicProviderID),
+			Name:             strings.TrimSpace(provider.Name),
+			Current:          provider.ProviderID == info.Provider.ProviderID,
+		})
+	}
+	return result, nil
 }
 
 // SelectProvider switches an authenticated web session to a specific App Store

@@ -589,6 +589,14 @@ func capabilityRows() []Capability {
 			NextAction: "Use list and view to inspect existing keys, then create with --name, --bundle-id, --output-dir, and --confirm, or recover a download with --key-id, --output-dir, and --confirm.",
 		},
 		{
+			Area:       "signing",
+			Capability: "APNs push notification keys",
+			Status:     statusWebSession,
+			Commands:   []string{"asc web push-keys list", "asc web push-keys create", "asc web push-keys download", "asc web push-keys revoke"},
+			Notes:      []string{"Uses private Developer Portal authentication-key endpoints. Creation takes --environment sandbox, production or both and verifies the APNs service; one-time P8 download saves private files on macOS or Linux. Revoke refuses keys of other services."},
+			NextAction: "Create with --name, --environment, --output-dir and --confirm, or recover a download with --key-id, --output-dir and --confirm.",
+		},
+		{
 			Area:         "signing",
 			Capability:   "Developer Portal Services ID lifecycle",
 			Status:       statusWebSession,
@@ -705,6 +713,14 @@ func capabilityRows() []Capability {
 			Commands:   []string{"asc web teams list"},
 			Notes:      []string{"Lists every Developer Portal team on the web session's Apple Account with its ID, name, and status. Membership expiry is not reported."},
 			NextAction: "Use asc web teams list to find a --developer-team value for other asc web commands.",
+		},
+		{
+			Area:       "access",
+			Capability: "App Store Connect providers",
+			Status:     statusWebSession,
+			Commands:   []string{"asc web providers list"},
+			Notes:      []string{"Lists every App Store Connect provider (team) of the web session's Apple Account and marks the current one. --provider-name, --public-provider-id or --provider-id switches the cached session first."},
+			NextAction: "Use asc web providers list to find a --provider-name or --public-provider-id value for asc web apps create and other asc web commands.",
 		},
 		{
 			Area:       "access",

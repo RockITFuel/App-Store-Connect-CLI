@@ -42,7 +42,7 @@ func TestRunWebAuthLoginFailuresAreClassified(t *testing.T) {
 		{
 			name:          "no terminal and no code command fails before sign-in",
 			wantExit:      ExitError,
-			wantStderr:    "Error: 2fa required: run in a terminal for an interactive prompt, pass --two-factor-code-command, or set ASC_WEB_2FA_CODE_COMMAND\n",
+			wantStderr:    "Error: 2fa required: run in a terminal for an interactive prompt, install Herdr or tmux for a prompt terminal (ASC_WEB_PROMPT_TERMINAL), pass --two-factor-code-command, or set ASC_WEB_2FA_CODE_COMMAND\n",
 			wantOutcome:   telemetry.OutcomeExpectedNegative,
 			wantDiagnosis: shared.DiagnosticRequiredInputMissing,
 			wantParameter: "--two-factor-code-command",
