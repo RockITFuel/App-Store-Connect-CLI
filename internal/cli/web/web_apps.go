@@ -254,6 +254,9 @@ func newWebAppsCreateCommand(d *shared.Deps) *ffcli.Command {
 	shared.HideFlagFromHelp(fs.Lookup("password"))
 	twoFactorCodeCommand := fs.String("two-factor-code-command", "", "Shell command that prints the 2FA code to stdout if verification is required")
 	twoFactorDelivery := bindTwoFactorDeliveryFlags(fs)
+	providerID := fs.Int64("provider-id", 0, "Numeric App Store Connect provider ID to create the app for")
+	publicProviderID := fs.String("public-provider-id", "", "Public App Store Connect provider/team ID to create the app for")
+	providerName := fs.String("provider-name", "", "App Store Connect provider/team name to create the app for (see asc web providers list)")
 	autoRename := fs.Bool("auto-rename", true, "Retry with unique name suffix if app name is already taken")
 	ifExists := shared.BindIfExistsFlag(fs, webAppCreateIfExistsModes...)
 	access := fs.String("access", "", "App access after create: full or limited")
@@ -288,6 +291,13 @@ Authentication:
   to have Apple text the code to a trusted phone number.
   If you already have a cached web session, --apple-id can be omitted.
 
+Provider (team):
+  The app is created for the web session's current App Store Connect provider,
+  printed before the create request. When the Apple Account belongs to several
+  teams, pass --provider-name, --public-provider-id or --provider-id; the
+  cached session is switched to that provider first. asc web providers list
+  shows the providers.
+
 Bundle ID preflight:
   If official ASC API authentication is available, the CLI will check or create
   the Bundle ID before app creation. Otherwise it assumes the Bundle ID already exists.
@@ -308,6 +318,7 @@ Examples:
   asc web apps create --name "My App" --bundle-id "com.example.app" --sku "MYAPP123" --apple-id "user@example.com"
   asc web apps create --name "My App" --bundle-id "com.example.app" --sku "MYAPP123" --access limited --user USER_ID
   asc web apps create --name "My App" --bundle-id "com.example.app" --sku "MYAPP123" --if-exists skip
+  asc web apps create --name "My App" --bundle-id "com.example.app" --sku "MYAPP123" --provider-name "Example Inc."
   %s asc web apps create --name "My App" --bundle-id "com.example.app" --sku "MYAPP123" --apple-id "user@example.com"
   %s='osascript /path/to/get-apple-2fa-code.scpt' asc web apps create --apple-id "user@example.com"`,
 			webPasswordEnvDisplay(),
@@ -332,6 +343,9 @@ Examples:
 			if err != nil {
 				return err
 			}
+			if *providerID < 0 {
+				return shared.WithDiagnostic(d.UsageError("--provider-id must be non-negative"), shared.DiagnosticInvalidInput, "--provider-id")
+			}
 			return RunAppsCreate(contextWithTwoFactorPreference(ctx, preference), d, AppsCreateRunOptions{
 				Name:                 *name,
 				BundleID:             *bundleID,
@@ -342,12 +356,17 @@ Examples:
 				CompanyName:          *companyName,
 				AppleID:              *appleID,
 				TwoFactorCodeCommand: *twoFactorCodeCommand,
-				AutoRename:           *autoRename,
-				IfExists:             ifExistsMode,
-				Access:               *access,
-				Users:                append([]string(nil), users...),
-				Output:               *output.Output,
-				Pretty:               *output.Pretty,
+				Provider: webcore.ProviderSelection{
+					ProviderID:       *providerID,
+					PublicProviderID: *publicProviderID,
+					ProviderName:     *providerName,
+				},
+				AutoRename: *autoRename,
+				IfExists:   ifExistsMode,
+				Access:     *access,
+				Users:      append([]string(nil), users...),
+				Output:     *output.Output,
+				Pretty:     *output.Pretty,
 			})
 		},
 	}

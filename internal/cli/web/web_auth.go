@@ -1691,7 +1691,7 @@ func restoreCachedWebProvider(ctx context.Context, d *shared.Deps, session, cach
 }
 
 func selectResolvedWebSessionProviderWith(ctx context.Context, d *shared.Deps, session *webcore.AuthSession, selection webcore.ProviderSelection) error {
-	if selection.ProviderID == 0 && strings.TrimSpace(selection.PublicProviderID) == "" {
+	if !hasProviderSelection(selection) {
 		return nil
 	}
 	// Interactive 2FA may outlive the request budget used to start login.
@@ -1706,6 +1706,9 @@ func selectResolvedWebSessionProviderWith(ctx context.Context, d *shared.Deps, s
 		parameter := "--provider-id"
 		if strings.TrimSpace(selection.PublicProviderID) != "" {
 			parameter = "--public-provider-id"
+		}
+		if strings.TrimSpace(selection.ProviderName) != "" {
+			parameter = "--provider-name"
 		}
 		return shared.WithDiagnostic(shared.NewValidationError(err), shared.DiagnosticInvalidInput, parameter)
 	}
@@ -1743,7 +1746,7 @@ func resolveSessionWithoutPersist(ctx context.Context, d *shared.Deps, appleID, 
 }
 
 func hasProviderSelection(selection webcore.ProviderSelection) bool {
-	return selection.ProviderID != 0 || strings.TrimSpace(selection.PublicProviderID) != ""
+	return selection.ProviderID != 0 || strings.TrimSpace(selection.PublicProviderID) != "" || strings.TrimSpace(selection.ProviderName) != ""
 }
 
 func callResolveSessionForProviderSelectionWith(ctx context.Context, d *shared.Deps, appleID, password, twoFactorCode, twoFactorCodeCommand string, selection webcore.ProviderSelection) (*webcore.AuthSession, string, error) {
@@ -1798,6 +1801,7 @@ func newWebAuthLoginCommand(d *shared.Deps) *ffcli.Command {
 	twoFactorDelivery := bindTwoFactorDeliveryFlags(fs)
 	providerID := fs.Int64("provider-id", 0, "Numeric App Store Connect provider ID to select for this web session")
 	publicProviderID := fs.String("public-provider-id", "", "Public App Store Connect provider/team ID to select for this web session")
+	providerName := fs.String("provider-name", "", "App Store Connect provider/team name to select for this web session")
 	output := d.BindOutputFlags(fs)
 
 	return &ffcli.Command{
@@ -1867,6 +1871,8 @@ Security-key example:
 Provider selection:
   - --public-provider-id selects the public App Store Connect provider/team ID
   - --provider-id selects Apple's numeric App Store Connect provider ID
+  - --provider-name selects the provider by its exact name
+  - asc web providers list shows every provider of the Apple Account
 
 Examples:
   # Interactive (in a terminal)
@@ -1904,6 +1910,7 @@ Examples:
 			selection := webcore.ProviderSelection{
 				ProviderID:       *providerID,
 				PublicProviderID: *publicProviderID,
+				ProviderName:     *providerName,
 			}
 			signInCtx := contextWithTwoFactorPreference(contextForWebSignIn(ctx), preference)
 			session, source, err := callResolveSessionForProviderSelectionWith(signInCtx, d, *appleID, "", "", *twoFactorCodeCommand, selection)

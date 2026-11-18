@@ -8107,6 +8107,7 @@
           "code": "2026-11-17"
         },
         "x-asc-source": [
+          "ListSessionProviders",
           "Login",
           "LoginWithClient",
           "OpenBrokeredSession",
@@ -8583,6 +8584,7 @@
           "code": "2026-11-14"
         },
         "x-asc-source": [
+          "Client.DownloadDeveloperPushKey",
           "Client.DownloadDeveloperSignInKey"
         ]
       }
@@ -8675,6 +8677,50 @@
         ]
       }
     },
+    "/services-account/QH65B2/account/auth/key/revoke": {
+      "servers": [
+        {
+          "url": "https://developer.apple.com"
+        }
+      ],
+      "post": {
+        "tags": [
+          "SignInKeys"
+        ],
+        "operationId": "signInKeys_deleteInstance",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInKeyRevokeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "2XX": {
+            "description": "Success. The client reads resultCode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInKeyRevokeResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error. The client reads the status code."
+          }
+        },
+        "x-asc-observed": {
+          "code": "2026-11-18"
+        },
+        "x-asc-source": [
+          "Client.RevokeDeveloperPushKey"
+        ]
+      }
+    },
     "/services-account/QH65B2/account/auth/key/v2/create": {
       "servers": [
         {
@@ -8715,6 +8761,7 @@
           "code": "2026-11-14"
         },
         "x-asc-source": [
+          "Client.CreateDeveloperPushKey",
           "Client.CreateDeveloperSignInKey"
         ]
       }
@@ -18114,6 +18161,22 @@
           }
         },
         "additionalProperties": true
+      },
+      "SignInKeyRevokeRequest": {
+        "type": "object",
+        "title": "SignInKeyRevokeRequest",
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "SignInKeyRevokeResponse": {
+        "type": "object",
+        "title": "SignInKeyRevokeResponse",
+        "properties": {
+          "resultCode": {
+            "type": "integer"
+          }
+        }
       },
       "SignInKeysResponse": {
         "type": "object",

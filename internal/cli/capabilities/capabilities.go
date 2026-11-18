@@ -589,6 +589,14 @@ func capabilityRows() []Capability {
 			NextAction: "Use list and view to inspect existing keys, then create with --name, --bundle-id, --output-dir, and --confirm, or recover a download with --key-id, --output-dir, and --confirm.",
 		},
 		{
+			Area:       "signing",
+			Capability: "APNs push notification keys",
+			Status:     statusWebSession,
+			Commands:   []string{"asc web push-keys list", "asc web push-keys create", "asc web push-keys download", "asc web push-keys revoke"},
+			Notes:      []string{"Uses private Developer Portal authentication-key endpoints. Creation takes --environment sandbox, production or both and verifies the APNs service; one-time P8 download saves private files on macOS or Linux. Revoke refuses keys of other services."},
+			NextAction: "Create with --name, --environment, --output-dir and --confirm, or recover a download with --key-id, --output-dir and --confirm.",
+		},
+		{
 			Area:         "signing",
 			Capability:   "Developer Portal Services ID lifecycle",
 			Status:       statusWebSession,

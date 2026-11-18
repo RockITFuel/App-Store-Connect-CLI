@@ -21,6 +21,7 @@ type webSessionFlags struct {
 	twoFactorDelivery    twoFactorDeliveryFlags
 	providerID           *int64
 	publicProviderID     *string
+	providerName         *string
 	sessionFromEnv       *bool
 }
 
@@ -32,6 +33,7 @@ func bindWebSessionFlags(fs *flag.FlagSet) webSessionFlags {
 		twoFactorDelivery:    bindTwoFactorDeliveryFlags(fs),
 		providerID:           fs.Int64("provider-id", 0, "Numeric App Store Connect provider ID to select for this web session"),
 		publicProviderID:     fs.String("public-provider-id", "", "Public App Store Connect provider/team ID to select for this web session"),
+		providerName:         fs.String("provider-name", "", "App Store Connect provider/team name to select for this web session (see asc web providers list)"),
 	}
 }
 
@@ -102,9 +104,14 @@ func providerSelectionFromFlags(flags webSessionFlags) webcore.ProviderSelection
 	if flags.publicProviderID != nil {
 		publicProviderID = *flags.publicProviderID
 	}
+	var providerName string
+	if flags.providerName != nil {
+		providerName = *flags.providerName
+	}
 	return webcore.ProviderSelection{
 		ProviderID:       providerID,
 		PublicProviderID: publicProviderID,
+		ProviderName:     providerName,
 	}
 }
 

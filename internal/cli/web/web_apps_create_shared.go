@@ -26,6 +26,9 @@ type AppsCreateRunOptions struct {
 
 	AppleID              string
 	TwoFactorCodeCommand string
+	// Provider selects the App Store Connect provider (team) the app is
+	// created for; empty keeps the session's current provider.
+	Provider webcore.ProviderSelection
 
 	AutoRename bool
 	Output     string
@@ -103,14 +106,36 @@ func normalizeAppsCreateRunOptions(opts AppsCreateRunOptions) AppsCreateRunOptio
 	return opts
 }
 
-func explainAppsCreateError(err error) error {
+func explainAppsCreateError(err error, session *webcore.AuthSession) error {
 	if webcore.IsMissingCompanyNameError(err) {
 		return fmt.Errorf(
 			"web apps create failed: Apple requires a company name for this account; retry with --company-name \"Your Company\": %w",
 			err,
 		)
 	}
+	// Apple answers an app create for a bundle ID of another team with a bare
+	// 5xx instead of a validation error.
+	if apiErr, ok := errors.AsType[*webcore.APIError](err); ok && apiErr.Status >= 500 {
+		return fmt.Errorf(
+			"web apps create failed: Apple returned %d while the web session acts for provider %s; this usually means the bundle ID belongs to another team. Run 'asc web providers list' and retry with --provider-name or --public-provider-id: %w",
+			apiErr.Status, sessionProviderLabel(session), err,
+		)
+	}
 	return fmt.Errorf("web apps create failed: %w", err)
+}
+
+func sessionProviderLabel(session *webcore.AuthSession) string {
+	if session == nil {
+		return "(unknown)"
+	}
+	label := strings.TrimSpace(session.ProviderName)
+	if label == "" {
+		label = "(unnamed)"
+	}
+	if publicID := strings.TrimSpace(session.PublicProviderID); publicID != "" {
+		return fmt.Sprintf("%q (%s)", label, publicID)
+	}
+	return fmt.Sprintf("%q (%d)", label, session.ProviderID)
 }
 
 func promptAppsCreateFields(d *shared.Deps, opts *AppsCreateRunOptions) error {
@@ -405,6 +430,9 @@ func RunAppsCreate(ctx context.Context, d *shared.Deps, opts AppsCreateRunOption
 
 	requestCtx, cancel := newWebRequestContextWith(ctx, d)
 	defer cancel()
+	if err := selectResolvedWebSessionProviderWith(requestCtx, d, session, opts.Provider); err != nil {
+		return err
+	}
 
 	switch source {
 	case "fresh":
@@ -414,6 +442,7 @@ func RunAppsCreate(ctx context.Context, d *shared.Deps, opts AppsCreateRunOption
 	default:
 		fmt.Fprintln(d.IO.ErrOut, "Using cached web session.")
 	}
+	fmt.Fprintf(d.IO.ErrOut, "Provider: %s\n", sessionProviderLabel(session))
 
 	client := newWebClientFn(session)
 	attrs := webcore.AppCreateAttributes{
@@ -485,7 +514,7 @@ func RunAppsCreate(ctx context.Context, d *shared.Deps, opts AppsCreateRunOption
 				err = errors.Join(err, fmt.Errorf("failed to roll back created bundle id %q: %w", opts.BundleID, rollbackErr))
 			}
 		}
-		return explainAppsCreateError(err)
+		return explainAppsCreateError(err, session)
 	}
 
 	fmt.Fprintf(d.IO.ErrOut, "Created app successfully (id=%s)\n", strings.TrimSpace(app.Data.ID))

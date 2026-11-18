@@ -544,3 +544,9 @@ func developerPortalAuthHint() string {
 	}
 	return "run 'asc web auth logout --apple-id EMAIL', then 'asc web auth login --apple-id EMAIL', and try again"
 }
+
+// DeveloperPortalTeamID returns the Developer Portal team the client resolved,
+// empty until the first portal request.
+func (c *Client) DeveloperPortalTeamID() string {
+	return c.developerPortalTeamID()
+}
