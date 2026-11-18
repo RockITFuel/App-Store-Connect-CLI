@@ -380,7 +380,7 @@ func TestPromptTwoFactorCodeInteractiveWithoutTTYReturnsSupportedAutomationHint(
 	if !strings.Contains(err.Error(), webTwoFactorCodeCommandEnv) {
 		t.Fatalf("expected env hint in error, got %v", err)
 	}
-	want := "2fa required: run in a terminal for an interactive prompt, pass --two-factor-code-command, or set " + webTwoFactorCodeCommandEnv
+	want := "2fa required: run in a terminal for an interactive prompt, install Herdr or tmux for a prompt terminal (ASC_WEB_PROMPT_TERMINAL), pass --two-factor-code-command, or set " + webTwoFactorCodeCommandEnv
 	if err.Error() != want {
 		t.Fatalf("error = %q, want %q", err.Error(), want)
 	}
@@ -639,7 +639,7 @@ func TestLoginWithOptionalTwoFactorReturnsPromptError(t *testing.T) {
 		return "", nil
 	}
 	promptTwoFactorCodeFn = func() (string, error) {
-		return "", errors.New("2fa required: run in a terminal for an interactive prompt, pass --two-factor-code-command, or set " + webTwoFactorCodeCommandEnv)
+		return "", errors.New("2fa required: run in a terminal for an interactive prompt, install Herdr or tmux for a prompt terminal (ASC_WEB_PROMPT_TERMINAL), pass --two-factor-code-command, or set " + webTwoFactorCodeCommandEnv)
 	}
 	submitTwoFactorCodeFn = func(ctx context.Context, session *webcore.AuthSession, code string) error {
 		t.Fatal("did not expect submit when prompt fails")

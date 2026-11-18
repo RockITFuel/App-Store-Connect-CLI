@@ -24,6 +24,8 @@ func TestMain(m *testing.M) {
 	// Pin the config path to a file that never exists.
 	_ = os.Setenv("ASC_CONFIG_PATH", filepath.Join(tempDir, "config.json"))
 	_ = os.Setenv("ASC_BYPASS_KEYCHAIN", "1")
+	// Never open a Herdr tab or tmux window on the developer's machine.
+	_ = os.Setenv("ASC_WEB_PROMPT_TERMINAL", "off")
 	// The core web package tests the default and rate-limit behavior.
 	restorePacing := webcore.DisableRequestPacingForTesting()
 	_ = os.Setenv("ASC_WEB_SESSION_CACHE_DIR", tempDir)

@@ -53,7 +53,7 @@ func webPasswordEnvAssignmentExample() string {
 var (
 	openTTYFn                      = openTTY
 	promptTwoFactorCodeFn          = promptTwoFactorCodeInteractive
-	twoFactorPromptAvailableFn     = terminalPromptAvailable
+	twoFactorPromptAvailableFn     = twoFactorPromptAvailable
 	promptPasswordFn               = promptPasswordInteractive
 	readTwoFactorCodeFromCommandFn = readTwoFactorCodeFromCommand
 	webLoginFn                     = webcore.Login
@@ -339,6 +339,9 @@ func promptPasswordInteractive(ctx context.Context) (string, error) {
 	if termIsTerminalFn(int(os.Stdin.Fd())) {
 		return readPasswordFromTerminal(ctx, os.Stdin, os.Stderr, false)
 	}
+	if promptTerminalAvailable() {
+		return promptInTerminal(ctx, "Apple Account password", "Apple Account password: ")
+	}
 	return "", nil
 }
 
@@ -361,7 +364,7 @@ func readTwoFactorCodeFromTerminalFD(fd int, writer io.Writer) (string, error) {
 	return code, nil
 }
 
-var errNoTwoFactorCodeSource = errors.New("2fa required: run in a terminal for an interactive prompt, pass --two-factor-code-command, or set " + webTwoFactorCodeCommandEnv)
+var errNoTwoFactorCodeSource = errors.New("2fa required: run in a terminal for an interactive prompt, install Herdr or tmux for a prompt terminal (" + webPromptTerminalEnv + "), pass --two-factor-code-command, or set " + webTwoFactorCodeCommandEnv)
 
 func promptTwoFactorCodeInteractive() (string, error) {
 	if tty, err := openTTYFn(); err == nil {
@@ -370,6 +373,9 @@ func promptTwoFactorCodeInteractive() (string, error) {
 	}
 	if termIsTerminalFn(int(os.Stdin.Fd())) {
 		return readTwoFactorCodeFromTerminalFD(int(os.Stdin.Fd()), os.Stderr)
+	}
+	if promptTerminalAvailable() {
+		return promptInTerminal(context.Background(), "Apple 2FA code", "Two-factor code required. Enter 2FA code: ")
 	}
 	return "", errNoTwoFactorCodeSource
 }
@@ -1825,11 +1831,20 @@ Password input options:
 
 Two-factor input options:
   - secure interactive prompt (default for manual use; needs a terminal)
+  - prompt terminal: without a terminal, the prompt opens in a Herdr tab or tmux window
   - --two-factor-code-command
   - %s environment variable (recommended for automation)
 
-Without a terminal, a fresh sign-in needs a 2FA code command or explicit
---two-factor-method security-key; otherwise it fails before the password is sent.
+Prompt terminal (`+webPromptTerminalEnv+`):
+  - auto (default): the tmux session asc runs in, else a running Herdr server,
+    else a detached tmux session (asc prints how to attach)
+  - herdr or tmux: always that terminal; off: never open one
+  - used for the password and the 2FA code when asc has no terminal of its own;
+    asc prints the pane id, so an agent or a person can type the answer there
+  - the answer is read back from a private temporary file that is removed at once
+
+Without a terminal or prompt terminal, a fresh sign-in needs a 2FA code command or
+explicit --two-factor-method security-key; otherwise it fails before the password is sent.
 
 Security-key sign-in (macOS):
   - official macOS release builds bundle the native dependencies

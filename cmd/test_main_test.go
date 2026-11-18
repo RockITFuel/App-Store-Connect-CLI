@@ -29,6 +29,8 @@ func TestMain(m *testing.M) {
 	_ = os.Setenv("ASC_ADS_BYPASS_KEYCHAIN", "1")
 	_ = os.Setenv("ASC_STOREKIT_BYPASS_KEYCHAIN", "1")
 	_ = os.Setenv("ASC_TELEMETRY_DISABLED", "1")
+	// Never open a Herdr tab or tmux window on the developer's machine.
+	_ = os.Setenv("ASC_WEB_PROMPT_TERMINAL", "off")
 	// Classification tests assert on terminal HTTP failures, so keep clients on
 	// the single-attempt path instead of waiting out retry backoff.
 	_ = os.Setenv("ASC_MAX_RETRIES", "0")
